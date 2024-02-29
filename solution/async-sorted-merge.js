@@ -44,7 +44,7 @@ module.exports = (logSources, printer) => {
 		// Initialize the heap with all items as pop items may be slow and initializing the heap
 		// help us to parallelize this expensive operation
 		let firstBatchPromises = [];
-		for (let i = 0; i < 20; i) {
+		for (let i = 0; i < 20; i++) {
 			firstBatchPromises.push(...addNextBatchToHeap());
 		}
 
