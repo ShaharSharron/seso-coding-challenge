@@ -11,7 +11,7 @@ module.exports = (logSources, printer) => {
 	logSources.forEach((logSource) => {
 		const item = logSource.pop();
 		if (item) {
-			minHeap.insert({ item, source: logSource });
+			minHeap.insert({ value: item.date, item, source: logSource });
 		}
 	});
 
@@ -23,6 +23,7 @@ module.exports = (logSources, printer) => {
 		const nextItemInSource = minLogEntryDataItem.source.pop();
 		if (nextItemInSource) {
 			minHeap.insert({
+				value: nextItemInSource.date,
 				item: nextItemInSource,
 				source: minLogEntryDataItem.source,
 			});

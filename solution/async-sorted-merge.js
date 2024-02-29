@@ -14,7 +14,11 @@ module.exports = (logSources, printer) => {
 			return new Promise(async (resolve, reject) => {
 				let item = await logSource.popAsync();
 				while (item) {
-					minHeap.insert({ item, source: logSource });
+					minHeap.insert({
+						value: item.date,
+						item,
+						source: logSource,
+					});
 					item = await logSource.popAsync();
 				}
 				resolve();
