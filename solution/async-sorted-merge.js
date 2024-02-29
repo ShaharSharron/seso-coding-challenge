@@ -15,7 +15,7 @@ module.exports = (logSources, printer) => {
 	const addNextBatchToHeap = () => {
 		return logSourcesWithIds.map(async (logSource) => {
 			if (
-				heapItemsCounterMap[logSource.index] > 5 ||
+				heapItemsCounterMap[logSource.index] > 20 ||
 				heapItemsCounterMap[logSource.index] === null
 			) {
 				return Promise.resolve();
@@ -43,11 +43,10 @@ module.exports = (logSources, printer) => {
 	return new Promise((resolve, reject) => {
 		// Initialize the heap with all items as pop items may be slow and initializing the heap
 		// help us to parallelize this expensive operation
-		let firstBatchPromises = [
-			...addNextBatchToHeap(),
-			...addNextBatchToHeap(),
-			...addNextBatchToHeap(),
-		];
+		let firstBatchPromises = [];
+		for (let i = 0; i < 20; i) {
+			firstBatchPromises.push(...addNextBatchToHeap());
+		}
 
 		Promise.all(firstBatchPromises).then(async () => {
 			while (!minHeap.isEmpty()) {
@@ -56,9 +55,12 @@ module.exports = (logSources, printer) => {
 
 				heapItemsCounterMap[nextMinItem.source.index]--;
 
-				if (heapItemsCounterMap[nextMinItem.source.index] <= 0) {
+				if (heapItemsCounterMap[nextMinItem.source.index] <= 10) {
 					const nextBatchPromises = addNextBatchToHeap();
-					await Promise.all(nextBatchPromises);
+
+					if (heapItemsCounterMap[nextMinItem.source.index] <= 0) {
+						await Promise.all(nextBatchPromises);
+					}
 				}
 			}
 
