@@ -10,7 +10,7 @@ module.exports = (logSources, printer) => {
 	// Initialize the heap with the first item from each logSource
 	logSources.forEach((logSource) => {
 		const item = logSource.pop();
-		if (item !== null) {
+		if (item) {
 			minHeap.insert({ item, source: logSource });
 		}
 	});
