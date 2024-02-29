@@ -1,6 +1,6 @@
 <img align="left" width="100px" height="100px" src="/assets/seso-eng-logo.png">
 
-# Seso Engineering | Challenge: Log Sorting
+# Seso Engineering | Challenge: Log Sorting | Shahar Sharon
 
 <br>
 
