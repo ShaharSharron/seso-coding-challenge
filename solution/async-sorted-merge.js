@@ -4,45 +4,28 @@ const MinHeap = require('../lib/min-heap');
 
 // Print all entries, across all of the *async* sources, in chronological order.
 
-const handleItemsInHeap = (minHeap, printer) => {
-	if (minHeap.isEmpty()) {
-		return Promise.resolve();
-	}
-
-	const minLogEntryDataItem = minHeap.extractMin();
-	printer.print(minLogEntryDataItem.item);
-
-	return minLogEntryDataItem.source
-		.popAsync()
-		.then((nextItemInSource) => {
-			if (nextItemInSource) {
-				minHeap.insert({
-					item: nextItemInSource,
-					source: minLogEntryDataItem.source,
-				});
-			}
-		})
-		.then(() => {
-			handleItemsInHeap(minHeap, printer);
-		});
-};
-
 module.exports = (logSources, printer) => {
-	return new Promise((resolve, reject) => {
-		const minHeap = new MinHeap();
+	const minHeap = new MinHeap();
 
-		// Initialize the heap with the first item from each logSource
-		const initialPromises = logSources.map((logSource) => {
-			return logSource
-				.popAsync()
-				.then(
-					(item) =>
-						item && minHeap.insert({ item, source: logSource })
-				);
+	return new Promise((resolve, reject) => {
+		// Initialize the heap with all items as pop items may be slow and initializing the heap
+		// help us to parallelize this expensive operation
+		const fullListInsertedToHeapPromise = logSources.map((logSource) => {
+			return new Promise(async (resolve, reject) => {
+				let item = await logSource.popAsync();
+				while (item) {
+					minHeap.insert({ item, source: logSource });
+					item = await logSource.popAsync();
+				}
+				resolve();
+			});
 		});
 
-		Promise.all(initialPromises).then(() => {
-			handleItemsInHeap(minHeap, printer);
+		Promise.all(fullListInsertedToHeapPromise).then(() => {
+			while (!minHeap.isEmpty()) {
+				printer.print(minHeap.extractMin().item);
+			}
+
 			printer.done();
 			resolve(console.log('Async sort complete.'));
 		});
