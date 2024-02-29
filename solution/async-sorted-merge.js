@@ -6,28 +6,60 @@ const MinHeap = require('../lib/min-heap');
 
 module.exports = (logSources, printer) => {
 	const minHeap = new MinHeap();
+	const logSourcesWithIds = logSources.map((logSource, i) => ({
+		source: logSource,
+		index: i,
+	}));
+	const heapItemsCounterMap = {};
+
+	const addNextBatchToHeap = () => {
+		return logSourcesWithIds.map(async (logSource) => {
+			if (
+				heapItemsCounterMap[logSource.index] > 5 ||
+				heapItemsCounterMap[logSource.index] === null
+			) {
+				return Promise.resolve();
+			}
+
+			let item = await logSource.source.popAsync();
+			if (item) {
+				minHeap.insert({
+					value: item.date,
+					item,
+					source: logSource,
+				});
+
+				heapItemsCounterMap[logSource.index] = isNaN(
+					heapItemsCounterMap[logSource.index]
+				)
+					? 1
+					: heapItemsCounterMap[logSource.index] + 1;
+			} else {
+				heapItemsCounterMap[logSource.index] = null;
+			}
+		});
+	};
 
 	return new Promise((resolve, reject) => {
 		// Initialize the heap with all items as pop items may be slow and initializing the heap
 		// help us to parallelize this expensive operation
-		const fullListInsertedToHeapPromise = logSources.map((logSource) => {
-			return new Promise(async (resolve, reject) => {
-				let item = await logSource.popAsync();
-				while (item) {
-					minHeap.insert({
-						value: item.date,
-						item,
-						source: logSource,
-					});
-					item = await logSource.popAsync();
-				}
-				resolve();
-			});
-		});
+		let firstBatchPromises = [
+			...addNextBatchToHeap(),
+			...addNextBatchToHeap(),
+			...addNextBatchToHeap(),
+		];
 
-		Promise.all(fullListInsertedToHeapPromise).then(() => {
+		Promise.all(firstBatchPromises).then(async () => {
 			while (!minHeap.isEmpty()) {
-				printer.print(minHeap.extractMin().item);
+				const nextMinItem = minHeap.extractMin();
+				printer.print(nextMinItem.item);
+
+				heapItemsCounterMap[nextMinItem.source.index]--;
+
+				if (heapItemsCounterMap[nextMinItem.source.index] <= 0) {
+					const nextBatchPromises = addNextBatchToHeap();
+					await Promise.all(nextBatchPromises);
+				}
 			}
 
 			printer.done();
